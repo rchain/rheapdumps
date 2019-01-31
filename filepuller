@@ -1,0 +1,32 @@
+#!/bin/bash
+set -eu -o pipefail
+shopt -s nullglob
+
+: ${PULLDIR:=/var/lib/rheapdumps}
+
+prefix=$1
+
+while read host; do
+	dir=$prefix$host
+	ec=0
+	rsync -aq --remove-source-files $host:$PULLDIR/ $dir/ || ec=$?
+
+	if [[ $ec -ne 0 ]]; then
+		echo "rsync exited with code $ec" >&2
+		continue
+	fi
+
+	for f in $dir/*; do
+		f=$(basename $f)
+		link=$prefix${host}_$f
+		if [[ ! -e $link ]]; then
+			ec=0
+			ln -sr $dir/$f $link || ec=$?
+
+			if [[ $ec -ne 0 ]]; then
+				echo "Could not create symlink: $ec" >&2
+				continue
+			fi
+		fi
+	done
+done

@@ -1,0 +1,6 @@
+[Service]
+ExecStart=/opt/rheapdumps/remotefilewatch.daemon %i
+User=rheapdumps
+
+[Install]
+WantedBy=multi-user.target

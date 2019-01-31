@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu -o pipefail
+
+cd /var/lib/rheapdumps
+
+if [[ ! -p notify ]]; then
+	mkfifo notify
+fi
+
+# for atomic writes to pipe with multiple writers, make sure that line
+# length is less than PIPE_BUF (see "getconf PIPE_BUF /"). On Linux it
+# is 4096 and hostnames certainly should be smaller than that.
+
+exec /opt/rheapdumps/remotefilewatch "$@" >notify

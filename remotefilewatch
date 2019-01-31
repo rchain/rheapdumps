@@ -1,0 +1,48 @@
+#!/bin/bash
+set -eu -o pipefail
+
+: ${PULLDIR:=/var/lib/rheapdumps}
+
+min_fail_delay=5
+max_fail_delay=$((min_fail_delay * 64))
+success_cmd_min_duration=$((15 * 60))
+
+remote_cmd="
+	cd $PULLDIR
+	echo .
+	inotifywait -rmq -e close_write --format %w .
+"
+
+errusage()
+{
+	echo "Usage: $0 <host>" >&2
+	exit 1
+}
+
+ssh_host=$1
+[[ $ssh_host ]] || errusage
+
+host=${ssh_host#*@}
+fail_delay=$min_fail_delay
+
+trap '' PIPE # survive fifo reader death
+
+while :; do
+	cmd_start=$(date +%s)
+	ssh $ssh_host bash -s <<<$remote_cmd |\
+		stdbuf -o0 sed "s/.*/$host/" || ec=$?
+	cmd_end=$(date +%s)
+
+	cmd_duration=$((cmd_end - cmd_start))
+	if [[ $cmd_duration -lt $success_cmd_min_duration ]]; then
+		if [[ $fail_delay -lt $max_fail_delay ]]; then
+			fail_delay=$((fail_delay * 2))
+		fi
+	else
+		fail_delay=$min_fail_delay
+	fi
+
+	echo "ssh exited with code $ec ($host)" >&2
+	echo "Sleeping for $fail_delay secs" >&2
+	sleep $fail_delay
+done
