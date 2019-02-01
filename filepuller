@@ -7,20 +7,19 @@ shopt -s nullglob
 prefix=$1
 
 while read host; do
-	hostdir=$prefix$host
+	hostdir=${prefix}incoming/$host
 
 	ec=0
-	rsync -aq --remove-source-files $host:$PULLDIR/ $hostdir/incoming/ || ec=$?
+	rsync -aq --remove-source-files $host:$PULLDIR/ $hostdir || ec=$?
 
 	if [[ $ec -ne 0 ]]; then
 		echo "rsync exited with code $ec" >&2
 		continue
 	fi
 
-	for src in $hostdir/incoming/*; do
+	for src in $hostdir/*; do
 		filename=${host}_$(basename $src)
-		dest=$hostdir/$filename
-		link=$prefix$filename
+		dest=$prefix$filename
 
 		ec=0
 		mv $src $dest || ec=$?
@@ -35,16 +34,6 @@ while read host; do
 
 		if [[ $ec -ne 0 ]]; then
 			echo "Could not chmod 644 $dest: $ec" >&2
-		fi
-
-		if [[ ! -e $link ]]; then
-			ec=0
-			ln -sr $dest $link || ec=$?
-
-			if [[ $ec -ne 0 ]]; then
-				echo "Could not symlink $dest to $link: $ec" >&2
-				continue
-			fi
 		fi
 	done
 done
