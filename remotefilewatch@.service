@@ -1,3 +1,6 @@
+[Unit]
+ConditionPathExists=/etc/rheapdumps/ssh/config
+
 [Service]
 ExecStart=/opt/rheapdumps/remotefilewatch.daemon %i
 User=rheapdumps

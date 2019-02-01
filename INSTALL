@@ -2,6 +2,9 @@
 
 #apt install moreutils
 
+systemctl disable --now filepuller \
+	remotefilewatch@{bootstrap-testnet,validator-0{1..5}}.rchain-dev.tk || true
+
 install -CD -m644 sysusers.conf /etc/sysusers.d/rheapdumps.conf
 install -CD -m644 tmpfiles.conf /etc/tmpfiles.d/rheapdumps.conf
 install -CD -m700 -o rheapdumps -d /etc/rheapdumps/ssh
@@ -12,17 +15,6 @@ systemd-sysusers /etc/sysusers.d/rheapdumps.conf
 systemd-tmpfiles --create /etc/tmpfiles.d/rheapdumps.conf
 
 systemctl daemon-reload
-systemctl enable filepuller
-systemctl restart filepuller
 
-if [[ -f /etc/rheapdumps/ssh/config ]]; then
-	for host in bootstrap-testnet validator-0{1..5}; do
-		fqdn=$host.rchain-dev.tk
-		service=remotefilewatch@$fqdn
-		systemctl enable $service
-		systemctl restart $service
-	done
-else
-	echo "No ssh config in /etc/rheapdumps/ssh/"
-	echo "Not enabling remote file watches"
-fi
+systemctl enable --now filepuller \
+	remotefilewatch@{bootstrap-testnet,validator-0{1..5}}.rchain-dev.tk
