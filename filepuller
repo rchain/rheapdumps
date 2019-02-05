@@ -1,39 +1,37 @@
 #!/bin/bash
-set -eu -o pipefail
+set -e -o pipefail
 shopt -s nullglob
 
 : ${PULLDIR:=/var/lib/rheapdumps}
 
-prefix=$1
+dest_dir=${1:-$PWD}
+incoming_dir=${2:-$PWD/incoming}
 
 while read host; do
-	hostdir=${prefix}incoming/$host
+	host_dir=$incoming_dir/$host
+	mkdir -p $host_dir
 
 	ec=0
-	rsync -aq --remove-source-files $host:$PULLDIR/ $hostdir || ec=$?
+	rsync -aq --remove-source-files $host:$PULLDIR/ $host_dir || ec=$?
 
 	if [[ $ec -ne 0 ]]; then
 		echo "rsync exited with code $ec" >&2
 		continue
 	fi
 
-	for src in $hostdir/*; do
-		filename=${host}_$(basename $src)
-		dest=$prefix$filename
+	for src in $host_dir/*; do
+		dest_name=${host}_$(basename $src)
+		dest_path=$dest_dir/$dest_name
 
 		ec=0
-		mv $src $dest || ec=$?
+		(
+			cp $src $dest_path.new
+			mv $dest_path.new $dest_path
+			rm $src
+		) || ec=$?
 
 		if [[ $ec -ne 0 ]]; then
-			echo "Could not move $src to $dest: $ec" >&2
-			continue
-		fi
-
-		ec=0
-		chmod 644 $dest || ec=$?
-
-		if [[ $ec -ne 0 ]]; then
-			echo "Could not chmod 644 $dest: $ec" >&2
+			echo "Could not move $src to $dest_path: $ec" >&2
 		fi
 	done
 done

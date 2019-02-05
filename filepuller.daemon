@@ -1,6 +1,8 @@
 #!/bin/bash
 set -eu -o pipefail
 
+: ${DEST_DIR:=/mnt/bucket-heapdumps}
+
 cd /var/lib/rheapdumps
 
 while :; do
@@ -8,6 +10,6 @@ while :; do
 	if [[ ! -p notify ]]; then
 		mkfifo notify
 	fi
-	/opt/rheapdumps/filepuller files/ <notify
+	/opt/rheapdumps/filepuller $DEST_DIR <notify
 	sleep 1
 done
